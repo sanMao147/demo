@@ -11,6 +11,7 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
 import * as dat from 'lil-gui'
 import gsap from 'gsap'
 import hotPoints from '@/config/point.js'
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 let timer = null
 
 const init = () => {
@@ -132,9 +133,9 @@ const init = () => {
   roof.rotation.y = Math.PI * 0.25
   roof.position.y = 2.5 + 0.5
   house.add(roof)
-  //创建辅助坐标轴
+  /*   //创建辅助坐标轴
   const axesHelper = new THREE.AxesHelper(200) //参数200标示坐标系大小，可以根据场景大小去设置
-  scene.add(axesHelper)
+  scene.add(axesHelper) */
 
   // Door
   const door = new THREE.Mesh(
@@ -199,7 +200,7 @@ const init = () => {
     color: '#727272',
   })
 
-  for (let i = 0; i < 50; i++) {
+  for (let i = 0; i < 20; i++) {
     const angle = Math.random() * Math.PI * 2 // Random angle
     const radius = 3 + Math.random() * 6 // Random radius
     const x = Math.cos(angle) * radius // Get the x position using cosinus
@@ -353,6 +354,34 @@ const init = () => {
     )
   })
 
+  // models
+  let mixer = null
+  let mixerDuck = null
+  const gltfLoader = new GLTFLoader()
+  gltfLoader.load('/models/Fox/glTF/Fox.gltf', (gltf) => {
+    gltf.scene.scale.set(0.015, 0.015, 0.015)
+    gltf.scene.position.set(-1, 0, 6.1)
+    gltf.scene.rotation.y = Math.PI
+    scene.add(gltf.scene)
+
+    //animation
+    mixer = new THREE.AnimationMixer(gltf.scene)
+    const action = mixer.clipAction(gltf.animations[1])
+    action.play()
+  })
+
+  gltfLoader.load('/models/Duck/glTF/Duck.gltf', (gltf) => {
+    gltf.scene.scale.set(0.3, 0.3, 0.3)
+
+    gltf.scene.rotation.y = Math.PI
+    scene.add(gltf.scene)
+
+    //animation
+    // mixerDuck = new THREE.AnimationMixer(gltf.scene)
+    // const action = mixerDuck.clipAction(gltf.animations[0])
+    // action.play()
+  })
+
   //全景图
   const city = textureLoader.load('/textures/ball/city.jpg')
   const hongkong = textureLoader.load(
@@ -449,9 +478,12 @@ const init = () => {
    * Animate
    */
   const clock = new THREE.Clock()
-
+  let previousTime = 0
   const tick = () => {
     const elapsedTime = clock.getElapsedTime()
+    const deltaTime = elapsedTime - previousTime
+    previousTime = elapsedTime
+
     citySphere.rotation.y -= 0.002
     hongkongSphere.rotation.y -= 0.003
     // Ghosts
@@ -477,7 +509,10 @@ const init = () => {
     ghost3.position.y =
       Math.sin(elapsedTime * 4) +
       Math.sin(elapsedTime * 2.5)
-
+    // Model animation
+    if (mixer) {
+      mixer.update(deltaTime)
+    }
     // Update controls
     controls.update()
 

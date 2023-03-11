@@ -8,10 +8,11 @@
 import { onMounted, onUnmounted } from 'vue'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
-import { FontLoader } from 'three/examples/jsm/loaders/FontLoader'
-import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry'
 import * as dat from 'lil-gui'
+import gsap from 'gsap'
+import hotPoints from '@/config/point.js'
 let timer = null
+
 const init = () => {
   /**
    * Base
@@ -134,47 +135,6 @@ const init = () => {
   //创建辅助坐标轴
   const axesHelper = new THREE.AxesHelper(200) //参数200标示坐标系大小，可以根据场景大小去设置
   scene.add(axesHelper)
-  // 字体
-  const fontLoader = new FontLoader()
-  fontLoader.load(
-    '/font/YouSheBiaoTiHei_Regular.json',
-    (font) => {
-      // console.log(font)
-      const material = new THREE.MeshMatcapMaterial({
-        matcap: matcapTexture,
-      })
-      const textGeometry = new TextGeometry('Open', {
-        font: font,
-        size: 0.2,
-        height: 0.08,
-        curveSegments: 12,
-        bevelEnabled: true,
-        bevelThickness: 0.02,
-        bevelSize: 0.02,
-        bevelSegments: 5,
-        bevelOffset: 0,
-        /*    
-        font — THREE.Font的实例。
-        size — Float。字体大小，默认值为100。
-        height — Float。挤出文本的厚度。默认值为50。
-        curveSegments — Integer。（表示文本的）曲线上点的数量。默认值为12。
-        bevelEnabled — Boolean。是否开启斜角，默认为false。
-        bevelThickness — Float。文本上斜角的深度，默认值为20。
-        bevelSize — Float。斜角与原始文本轮廓之间的延伸距离。默认值为8。
-        bevelSegments — Integer。斜角的分段数。默认值为3。
-        */
-      })
-
-      const fontMesh = new THREE.Mesh(
-        textGeometry,
-        material
-      )
-      fontMesh.position.y = 1
-      fontMesh.position.z = 2
-      fontMesh.position.x = -0.4
-      house.add(fontMesh)
-    }
-  )
 
   // Door
   const door = new THREE.Mesh(
@@ -393,15 +353,23 @@ const init = () => {
     )
   })
 
-  /**
-   * Mouse
-   */
-  const mouse = new THREE.Vector2()
-
-  window.addEventListener('dbclick', (event) => {
-    mouse.x = (event.clientX / sizes.width) * 2 - 1
-    mouse.y = -(event.clientY / sizes.height) * 2 + 1
-  })
+  //全景图
+  const city = textureLoader.load('/textures/ball/city.jpg')
+  const hongkong = textureLoader.load(
+    '/textures/ball/hongkong.jpg'
+  )
+  const citySphere = new THREE.Mesh(
+    new THREE.SphereGeometry(1, 32, 16),
+    new THREE.MeshBasicMaterial({ map: city })
+  )
+  const hongkongSphere = new THREE.Mesh(
+    new THREE.SphereGeometry(1, 32, 16),
+    new THREE.MeshBasicMaterial({ map: hongkong })
+  )
+  citySphere.position.set(-4, 5, 3)
+  hongkongSphere.position.set(4, 5, 3)
+  house.add(citySphere)
+  house.add(hongkongSphere)
 
   /**
    * Camera
@@ -436,6 +404,47 @@ const init = () => {
     Math.min(window.devicePixelRatio, 2)
   )
 
+  // 点击按钮
+  // const pointTexture = textureLoader.load('/click.png')
+  // const material = new THREE.SpriteMaterial({
+  //   map: pointTexture,
+  // })
+  // const sprite = new THREE.Sprite(material)
+  // sprite.position.set(4, 6, 6)
+  // sprite.scale.set(1, 1, 1)
+  // gsap.to(sprite.scale, {
+  //   y: 0.6,
+  //   x: 0.6,
+  //   duration: 3,
+  //   ease: 'power1.inOut',
+  //   repeat: -1,
+  //   yoyo: true,
+  // })
+  // house.add(sprite)
+
+  /**
+   * Mouse
+   */
+  const raycaster = new THREE.Raycaster()
+
+  window.addEventListener('dblclick', (event) => {
+    const mouse = new THREE.Vector2()
+    mouse.x = (event.clientX / sizes.width) * 2 - 1
+    mouse.y = -(event.clientY / sizes.height) * 2 + 1
+    // 通过摄像机和鼠标位置更新射线
+
+    raycaster.setFromCamera(mouse, camera)
+    const city_intersects =
+      raycaster.intersectObject(citySphere)
+    const hongkong_intersects =
+      raycaster.intersectObject(hongkongSphere)
+    if (city_intersects.length > 0) {
+      console.log('点击了city')
+    } else if (hongkong_intersects.length > 0) {
+      console.log('点击了hongkong')
+    }
+  })
+
   /**
    * Animate
    */
@@ -443,7 +452,8 @@ const init = () => {
 
   const tick = () => {
     const elapsedTime = clock.getElapsedTime()
-
+    citySphere.rotation.y -= 0.002
+    hongkongSphere.rotation.y -= 0.003
     // Ghosts
     const ghost1Angle = elapsedTime * 0.5
     ghost1.position.x = Math.cos(ghost1Angle) * 4
